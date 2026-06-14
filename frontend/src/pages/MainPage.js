@@ -101,6 +101,13 @@ export default function MainPage() {
 
   return (
     <div className="relative w-full h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-black text-white overflow-hidden">
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="absolute top-4 right-4 z-20 rounded-full bg-white/10 px-4 py-2 text-sm font-medium backdrop-blur transition-colors hover:bg-white/20"
+      >
+        분석 대시보드
+      </button>
+
       <AnimatePresence initial={false} custom={direction}>
         <motion.div
           key={page}

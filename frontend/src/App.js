@@ -6,6 +6,7 @@ import WarningPage from './pages/WarningPage';
 import ResultPage from './pages/ResultPage';
 import NotFoundPage from './pages/NotFoundPage';
 import SelfDiagnosisPage from './pages/SelfDiagnosisPage';
+import DashboardPage from './pages/DashboardPage';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/warning" element={<WarningPage />} />
         <Route path="/result" element={<ResultPage />} />
         <Route path="/self" element={<SelfDiagnosisPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Router>

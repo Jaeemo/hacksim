@@ -13,3 +13,24 @@ export const startSimulation = async (scenarioId) => {
 
   return data;
 };
+
+export const fetchRuns = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/runs`);
+
+  if (!response.ok) {
+    throw new Error(`감사 로그 조회 실패 (Status: ${response.status})`);
+  }
+
+  return response.json();
+};
+
+export const fetchReport = async (runId) => {
+  const response = await fetch(`${API_BASE_URL}/api/runs/${runId}/report`);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || `분석 리포트 조회 실패 (Status: ${response.status})`);
+  }
+
+  return data;
+};
