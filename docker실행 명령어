@@ -1,0 +1,1 @@
+docker run -d -p 8080:80 -e VNC_SERVER="host.docker.internal:5901" --name my-hacksim hacksim-novnc

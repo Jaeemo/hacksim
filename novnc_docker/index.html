@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Hacksim VNC Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; }
+        #vnc_screen { flex: 1; min-width: 0; background-color: #000; }
+        #vnc_screen canvas { }
+        #reconnect_panel { transition: opacity 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-black flex flex-col h-screen">
+
+    <!-- 상단 재연결 패널 (자동 재시도 시 상태 표시용) -->
+    <div id="reconnect_panel" class="absolute top-0 left-0 right-0 bg-gray-900 bg-opacity-80 p-3 flex justify-center items-center z-20 opacity-0 pointer-events-none">
+        <span id="vnc_status" class="text-white text-sm mr-4"></span>
+        <button id="top_reconnect_button" class="bg-cyan-600 hover:bg-cyan-700 text-white rounded px-4 py-1 text-sm font-semibold transition-colors">재연결</button>
+    </div>
+
+    <!-- VNC 화면과 종료 버튼을 담는 메인 뷰 -->
+    <div id="main_view" class="flex h-full w-full">
+        
+        <div id="vnc_screen" class="h-full z-10"></div>
+
+        <!-- 시뮬레이션 제어 사이드바 -->
+        <div class="w-48 bg-gray-800 h-full z-15 flex flex-col p-4 shadow-lg border-l border-gray-700">
+            <h3 class="text-white text-lg font-semibold mb-4 text-cyan-400">제어 패널</h3>
+            
+            <!-- [신규] 수동 재연결 버튼 추가 -->
+            <button id="manual_reconnect_button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg shadow-lg mb-4">
+                VM 수동 연결
+            </button>
+            
+            <p class="text-gray-400 text-sm mb-6">시뮬레이션이 진행 중입니다. 종료하려면 아래 버튼을 누르세요.</p>
+            
+            <button id="end_simulation_button" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-5 rounded-lg shadow-lg mt-auto">
+                시뮬레이션<br>종료
+            </button>
+        </div>
+    </div>
+
+
+    <script type="module">
+        import RFB from '/core/rfb.js'; // (절대 경로 사용)
+
+        const VNC_HOST = 'localhost';
+        const VNC_PORT = '8080';
+        const VNC_PASSWORD = ''; 
+
+        let rfb;
+        const screenDisplay = document.getElementById('vnc_screen');
+        const endButton = document.getElementById('end_simulation_button');
+        const reconnectPanel = document.getElementById('reconnect_panel');
+        const statusDisplay = document.getElementById('vnc_status');
+        const topReconnectButton = document.getElementById('top_reconnect_button');
+        
+        // [신규] 오른쪽 패널의 수동 재연결 버튼
+        const manualReconnectButton = document.getElementById('manual_reconnect_button');
+
+        let loadingInterval = null;
+        let connectRetryTimer = null; 
+
+        function updateStatus(message, showReconnectUI = false) {
+            // (로딩 애니메이션 기능은 이전과 동일)
+            if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
+            statusDisplay.textContent = message;
+            if (showReconnectUI) {
+                reconnectPanel.classList.remove('opacity-0', 'pointer-events-none');
+                if (message === '연결 중...') {
+                    let dotCount = 0;
+                    statusDisplay.textContent = '연결 중';
+                    loadingInterval = setInterval(() => {
+                        dotCount = (dotCount + 1) % 4;
+                        let dots = ' .'.repeat(dotCount);
+                        statusDisplay.textContent = `연결 중${dots}`;
+                    }, 500);
+                }
+            } else {
+                reconnectPanel.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        function connect() {
+            if (connectRetryTimer) {
+                clearTimeout(connectRetryTimer);
+                connectRetryTimer = null;
+            }
+
+            console.log("Attempting to connect to VNC server...");
+            updateStatus('연결 중...', true); // "연결 중..." UI 표시
+            
+            if (rfb) { rfb.disconnect(); }
+
+            try {
+                // 스케일링 옵션이 제거된 기본 RFB 객체
+                rfb = new RFB(screenDisplay, `ws://${VNC_HOST}:${VNC_PORT}/websockify`, {
+                    credentials: { password: VNC_PASSWORD }
+                });
+
+                rfb.addEventListener('connect', () => {
+                    console.log("VNC connected successfully.");
+                    updateStatus('연결됨', false); 
+                    if (connectRetryTimer) {
+                        clearTimeout(connectRetryTimer);
+                        connectRetryTimer = null;
+                    }
+                });
+
+                rfb.addEventListener('disconnect', (e) => {
+                    let reason = e.detail.clean ? "연결이 정상적으로 종료되었습니다." : e.detail.reason || "서버에 연결할 수 없습니다.";
+                    console.error("VNC disconnected:", reason);
+                    updateStatus(`연결 실패: ${reason}`, true); 
+                    rfb = null;
+                    
+                    // [수정됨] 'disconnect' 이벤트 발생 시 자동 재시도
+                    console.log("Will attempt to reconnect in 1.5 seconds...");
+                    connectRetryTimer = setTimeout(connect, 1500); 
+                });
+                
+            } catch (exc) {
+                console.error('noVNC Error:', exc);
+                updateStatus(`클라이언트 오류: ${exc}`, true);
+                
+                // --- [핵심 버그 수정] ---
+                // try-catch에서 실패했을 때도 자동 재시도를 하도록 로직 추가
+                console.log("Will attempt to reconnect in 1.5 seconds after exception...");
+                if (connectRetryTimer) clearTimeout(connectRetryTimer); // 중복 방지
+                connectRetryTimer = setTimeout(connect, 1500);
+            }
+        }
+        
+        // 상단 재연결 버튼
+        topReconnectButton.addEventListener('click', connect);
+        // [신규] 우측 패널 재연결 버튼
+        manualReconnectButton.addEventListener('click', connect);
+
+        endButton.addEventListener('click', () => {
+            window.location.href = 'http://localhost:3000/self';
+        });
+
+        // 페이지 로드 시 즉시 연결 시도 (실패 시 자동으로 재시도됨)
+        window.addEventListener('load', connect);
+    </script>
+</body>
+</html>
