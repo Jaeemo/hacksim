@@ -40,6 +40,11 @@ launches the malware → user watches via noVNC.
 
 ## 3. Trust boundaries
 
+![Hacksim data-flow diagram with trust boundaries](dfd.svg)
+
+The DFD above shows the same crossings as a level-1 data-flow diagram; each arrow that crosses a
+dashed boundary line is an entry point an attacker can target.
+
 ```
 [ Browser ] --(1)--> [ Backend API ] --(2)--> [ vmrun / host OS ] --(3)--> [ Guest VM ] --(4)--> [ Network ]
 ```
@@ -105,7 +110,7 @@ Legend for mitigation status: ✅ implemented · 🟡 partial · ⬜ planned.
 
 ## 6. TODO (fills in as the roadmap lands)
 
-- [ ] Data-flow diagram with explicit trust-boundary lines (DFD level 1)
+- [x] Data-flow diagram with explicit trust-boundary lines (DFD level 1) — `docs/dfd.svg`
 - [ ] Network-isolation design + INetSim/FakeNet-NG config (Boundary 4)
 - [ ] Authn + audit logging design (Boundary 1)
 - [ ] Documented procedure for capturing a verified-clean snapshot (Boundary 3)
