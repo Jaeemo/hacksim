@@ -1,14 +1,15 @@
 package com.capstone.backend;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Locale;
 
 @RestController
@@ -19,41 +20,45 @@ public class SimulationController {
 
     private final SimulationService simulationService;
     private final SimulationProperties simulationProperties;
+    private final DetonationAuditService auditService;
 
-    public SimulationController(SimulationService simulationService, SimulationProperties simulationProperties) {
+    public SimulationController(SimulationService simulationService,
+                               SimulationProperties simulationProperties,
+                               DetonationAuditService auditService) {
         this.simulationService = simulationService;
         this.simulationProperties = simulationProperties;
+        this.auditService = auditService;
     }
 
     @PostMapping("/start-simulation/{simulationType}")
-    public ResponseEntity<ApiResponse> startSimulation(@PathVariable String simulationType) {
+    public ApiResponse startSimulation(@PathVariable String simulationType, HttpServletRequest request) {
         String scenarioId = simulationType.toLowerCase(Locale.ROOT);
-        String shortcutPath = simulationProperties.findShortcut(scenarioId).orElse(null);
+        String shortcutPath = simulationProperties.findShortcut(scenarioId)
+                .orElseThrow(() -> new ScenarioNotFoundException(simulationType));
 
-        if (shortcutPath == null) {
-            logger.warn("Invalid simulation type requested: {}", simulationType);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Invalid simulation type: " + simulationType));
-        }
+        DetonationRun run = auditService.start(scenarioId, request.getRemoteAddr());
 
         try {
-            logger.info("[{}] simulation requested. Reverting to clean snapshot and settling {}ms before launch.",
-                    scenarioId,
-                    simulationProperties.getStartupDelayMs());
+            logger.info("[{}] detonation requested from {}. Reverting to clean snapshot and settling {}ms before launch.",
+                    scenarioId, run.getClientIp(), simulationProperties.getStartupDelayMs());
 
             simulationService.runShortcut(shortcutPath, simulationProperties.getStartupDelayMs());
 
-            logger.info("[{}] simulation command sent.", scenarioId);
-            return ResponseEntity.ok(ApiResponse.success(scenarioId + " simulation triggered."));
+            auditService.markTriggered(run);
+            logger.info("[{}] detonation command sent.", scenarioId);
+            return ApiResponse.success(scenarioId + " simulation triggered.");
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-            logger.error("Simulation request interrupted: {}", ie.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Simulation request interrupted."));
-        } catch (Exception e) {
-            logger.error("Simulation failed: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error(e.getMessage()));
+            auditService.markFailed(run, "Simulation request interrupted.");
+            throw new SimulationException("Simulation request interrupted.");
+        } catch (Exception ex) {
+            auditService.markFailed(run, ex.getMessage());
+            throw new SimulationException("Simulation could not be started.");
         }
+    }
+
+    @GetMapping("/runs")
+    public List<DetonationRunResponse> recentRuns() {
+        return auditService.recentRuns();
     }
 }

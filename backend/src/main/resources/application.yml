@@ -4,6 +4,16 @@ server:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:h2:file:./data/hacksim;AUTO_SERVER=TRUE}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
 vmware:
   run-path: ${VMWARE_RUN_PATH:/Applications/VMware Fusion.app/Contents/Library/vmrun}
   snapshot:
