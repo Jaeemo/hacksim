@@ -28,3 +28,8 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// Only produce the executable boot jar (keeps the Docker COPY unambiguous)
+jar {
+	enabled = false
+}

@@ -1,0 +1,26 @@
+services:
+  backend:
+    build: ./backend
+    image: hacksim-backend
+    ports:
+      - "5001:5001"
+    environment:
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      HACKSIM_API_KEY: dev-local-key
+      # A container cannot reach the host's VMware Fusion, so it serves the web / analysis tier only
+      # (audit log, telemetry ingest, reports, posture). Real detonation (vmrun) must run on the host
+      # — see README. Snapshot revert is disabled here to avoid failing on a missing vmrun.
+      VMWARE_REVERT_BEFORE_RUN: "false"
+    volumes:
+      - hacksim-data:/app/data
+
+  frontend:
+    build: ./frontend
+    image: hacksim-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  hacksim-data:

@@ -1,0 +1,6 @@
+build/
+.gradle/
+bin/
+data/
+*.jar
+.DS_Store

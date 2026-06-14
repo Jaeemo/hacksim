@@ -41,4 +41,13 @@ class ApiKeyAuthTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value("error"));
     }
+
+    @Test
+    void validKeyValidTypeIsAcceptedAsync() throws Exception {
+        // A known type is accepted immediately (202) with a run id; the detonation runs in background.
+        mockMvc.perform(post("/api/start-simulation/{type}", "ransomware").header("X-API-Key", "test-key"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.runId").isNumber());
+    }
 }

@@ -3,6 +3,7 @@ package com.capstone.backend;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,47 +19,40 @@ public class SimulationController {
 
     private static final Logger logger = LoggerFactory.getLogger(SimulationController.class);
 
-    private final SimulationService simulationService;
+    private final DetonationLauncher detonationLauncher;
     private final SimulationProperties simulationProperties;
     private final DetonationAuditService auditService;
 
-    public SimulationController(SimulationService simulationService,
+    public SimulationController(DetonationLauncher detonationLauncher,
                                SimulationProperties simulationProperties,
                                DetonationAuditService auditService) {
-        this.simulationService = simulationService;
+        this.detonationLauncher = detonationLauncher;
         this.simulationProperties = simulationProperties;
         this.auditService = auditService;
     }
 
     @PostMapping("/start-simulation/{simulationType}")
-    public ApiResponse startSimulation(@PathVariable String simulationType, HttpServletRequest request) {
+    public ResponseEntity<DetonationAcceptedResponse> startSimulation(@PathVariable String simulationType,
+                                                                      HttpServletRequest request) {
         String scenarioId = simulationType.toLowerCase(Locale.ROOT);
         String shortcutPath = simulationProperties.findShortcut(scenarioId)
                 .orElseThrow(() -> new ScenarioNotFoundException(simulationType));
 
         DetonationRun run = auditService.start(scenarioId, request.getRemoteAddr());
+        detonationLauncher.launch(run.getId(), shortcutPath, simulationProperties.getStartupDelayMs());
 
-        try {
-            logger.info("[{}] detonation requested from {}. Reverting to clean snapshot and settling {}ms before launch.",
-                    scenarioId, run.getClientIp(), simulationProperties.getStartupDelayMs());
-
-            simulationService.runShortcut(shortcutPath, simulationProperties.getStartupDelayMs());
-
-            auditService.markTriggered(run);
-            logger.info("[{}] detonation command sent.", scenarioId);
-            return ApiResponse.success(scenarioId + " simulation triggered.");
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            auditService.markFailed(run, "Simulation request interrupted.");
-            throw new SimulationException("Simulation request interrupted.");
-        } catch (Exception ex) {
-            auditService.markFailed(run, ex.getMessage());
-            throw new SimulationException("Simulation could not be started.");
-        }
+        logger.info("[{}] detonation accepted as run #{} from {}.", scenarioId, run.getId(), run.getClientIp());
+        return ResponseEntity.accepted()
+                .body(DetonationAcceptedResponse.of(run.getId(), scenarioId + " detonation started."));
     }
 
     @GetMapping("/runs")
     public List<DetonationRunResponse> recentRuns() {
         return auditService.recentRuns();
+    }
+
+    @GetMapping("/runs/{runId}")
+    public DetonationRunResponse run(@PathVariable Long runId) {
+        return auditService.get(runId);
     }
 }

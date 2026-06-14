@@ -38,4 +38,11 @@ public class DetonationAuditService {
                 .map(DetonationRunResponse::from)
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public DetonationRunResponse get(Long runId) {
+        return repository.findById(runId)
+                .map(DetonationRunResponse::from)
+                .orElseThrow(() -> new RunNotFoundException(runId));
+    }
 }
