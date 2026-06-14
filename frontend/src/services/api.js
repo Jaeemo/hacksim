@@ -34,3 +34,13 @@ export const fetchReport = async (runId) => {
 
   return data;
 };
+
+export const fetchPostureReports = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/posture`);
+
+  if (!response.ok) {
+    throw new Error(`자가진단 결과 조회 실패 (Status: ${response.status})`);
+  }
+
+  return response.json();
+};

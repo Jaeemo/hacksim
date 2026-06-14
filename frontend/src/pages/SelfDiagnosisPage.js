@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Download } from 'lucide-react';
+import { Download, ShieldCheck } from 'lucide-react';
+import { fetchPostureReports } from '../services/api';
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -8,7 +9,21 @@ const pageVariants = {
   exit: { opacity: 0, y: -20, transition: { duration: 0.3 } },
 };
 
+const STATUS_STYLES = {
+  PASS: 'bg-green-500/20 text-green-300 border-green-500/40',
+  WARN: 'bg-yellow-500/20 text-yellow-200 border-yellow-500/40',
+  FAIL: 'bg-red-500/20 text-red-300 border-red-500/40',
+};
+
 export default function SelfDiagnosisPage() {
+  const [latest, setLatest] = useState(null);
+
+  useEffect(() => {
+    fetchPostureReports()
+      .then((reports) => setLatest(reports[0] || null))
+      .catch(() => setLatest(null));
+  }, []);
+
   const handleDownload = () => {
     alert("실제 환경에서는 여기서 'Hacksim PC 자가진단.exe' 파일 다운로드가 시작됩니다.");
   };
@@ -59,6 +74,33 @@ export default function SelfDiagnosisPage() {
             </motion.button>
           </div>
         </div>
+
+        {latest && (
+          <div className="mx-auto mt-6 max-w-3xl rounded-3xl border border-white/20 bg-white/10 p-8 backdrop-blur-lg">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-2xl font-bold text-green-400">
+                <ShieldCheck className="h-6 w-6" /> 최근 자가진단 결과
+              </h2>
+              <span className="text-3xl font-extrabold text-white">
+                {latest.score}
+                <span className="text-base text-gray-400">/100</span>
+              </span>
+            </div>
+            <p className="mb-4 text-sm text-gray-400">
+              {latest.hostId} · {latest.os} · {new Date(latest.reportedAt).toLocaleString('ko-KR')}
+            </p>
+            <ul className="space-y-2">
+              {latest.checks.map((check) => (
+                <li key={check.checkId} className="flex items-center justify-between rounded-lg bg-black/20 px-4 py-2">
+                  <span className="text-gray-100">{check.name}</span>
+                  <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[check.status] || 'border-white/20 text-gray-300'}`}>
+                    {check.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </motion.div>
     </div>
   );
