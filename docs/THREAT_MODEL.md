@@ -92,9 +92,9 @@ Legend for mitigation status: ✅ implemented · 🟡 partial · ⬜ planned.
 
 | STRIDE | Threat | Mitigation | Status |
 |--------|--------|------------|--------|
-| Information disclosure | Malware exfiltrates data to real external C2 | Host-only / isolated network; **INetSim or FakeNet-NG** to fake internet services | ⬜ |
-| Denial of service / spread | Worm-type samples scan and infect the LAN | No bridged networking; isolated virtual network only | ⬜ |
-| Tampering | Malware downloads a second-stage payload from the internet | Block real egress; serve fake responses for analysis | ⬜ |
+| Information disclosure | Malware exfiltrates data to real external C2 | Host-only vmnet + INetSim sink answers DNS/HTTP locally — see `network/` | 🟡 |
+| Denial of service / spread | Worm-type samples scan and infect the LAN | No bridged/NAT adapter; isolated private vmnet only (`network/README.md`) | 🟡 |
+| Tampering | Malware downloads a second-stage payload from the internet | No real egress; `vm_scripts/verify_isolation.ps1` gates the baseline snapshot | 🟡 |
 
 ---
 
@@ -102,7 +102,9 @@ Legend for mitigation status: ✅ implemented · 🟡 partial · ⬜ planned.
 
 1. **Unauthenticated detonation trigger** — anyone able to reach the backend port can execute malware
    in the guest. Highest-priority gap. *(Phase 4)*
-2. **No network isolation** — a reverted-but-online guest can still reach the real internet/LAN. *(Phase 2)*
+2. **Network isolation depends on operator setup** — the isolated-vmnet + INetSim design and a
+   pre-snapshot verification script ship in `network/`, but isolation is only real once the lab is
+   wired that way; `verify_isolation.ps1` is the gate that proves it. *(Phase 2 — design done)*
 3. **Host-coupled, hard to contain** — runs on the operator's personal machine with no documented
    hardening of the VMware host↔guest channel. *(Phase 2/5)*
 
@@ -111,7 +113,7 @@ Legend for mitigation status: ✅ implemented · 🟡 partial · ⬜ planned.
 ## 6. TODO (fills in as the roadmap lands)
 
 - [x] Data-flow diagram with explicit trust-boundary lines (DFD level 1) — `docs/dfd.svg`
-- [ ] Network-isolation design + INetSim/FakeNet-NG config (Boundary 4)
+- [x] Network-isolation design + INetSim config + verification script (Boundary 4) — `network/`, `vm_scripts/verify_isolation.ps1`
 - [ ] Authn + audit logging design (Boundary 1)
 - [ ] Documented procedure for capturing a verified-clean snapshot (Boundary 3)
 - [ ] Tie detected behaviours (Phase 1 telemetry) back to the threats above
