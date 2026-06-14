@@ -24,6 +24,13 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(ex.getMessage());
     }
 
+    @ExceptionHandler(RunNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiResponse handleRunNotFound(RunNotFoundException ex) {
+        logger.warn("Run not found: {}", ex.getMessage());
+        return ApiResponse.error(ex.getMessage());
+    }
+
     @ExceptionHandler(SimulationException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse handleSimulation(SimulationException ex) {

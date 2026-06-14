@@ -1,0 +1,44 @@
+<!--
+  Minimal Sysmon configuration for the Hacksim detonation guest.
+
+  Captures the five event types the backend understands (process creation, network
+  connections, file writes, registry value sets, DNS queries). It is intentionally compact
+  for readability; for production analysis start from a community baseline such as
+  SwiftOnSecurity/sysmon-config or Olaf Hartong/sysmon-modular and tune from there.
+
+  Install in the guest (elevated):  sysmon64.exe -accepteula -i sysmon-config.xml
+  Update after edits:               sysmon64.exe -c sysmon-config.xml
+-->
+<Sysmon schemaversion="4.90">
+  <HashAlgorithms>SHA256</HashAlgorithms>
+  <EventFiltering>
+
+    <!-- Event ID 1: process creation -->
+    <RuleGroup name="process-create" groupRelation="or">
+      <ProcessCreate onmatch="exclude" />
+    </RuleGroup>
+
+    <!-- Event ID 3: network connections -->
+    <RuleGroup name="network-connect" groupRelation="or">
+      <NetworkConnect onmatch="exclude" />
+    </RuleGroup>
+
+    <!-- Event ID 11: file create / write -->
+    <RuleGroup name="file-create" groupRelation="or">
+      <FileCreate onmatch="exclude" />
+    </RuleGroup>
+
+    <!-- Event ID 13: registry value set -->
+    <RuleGroup name="registry-set" groupRelation="or">
+      <RegistryEvent onmatch="include">
+        <EventType condition="is">SetValue</EventType>
+      </RegistryEvent>
+    </RuleGroup>
+
+    <!-- Event ID 22: DNS query -->
+    <RuleGroup name="dns-query" groupRelation="or">
+      <DnsQuery onmatch="exclude" />
+    </RuleGroup>
+
+  </EventFiltering>
+</Sysmon>
