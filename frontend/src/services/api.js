@@ -1,8 +1,9 @@
-import { API_BASE_URL } from '../config/appConfig';
+import { API_BASE_URL, API_KEY } from '../config/appConfig';
 
 export const startSimulation = async (scenarioId) => {
   const response = await fetch(`${API_BASE_URL}/api/start-simulation/${scenarioId}`, {
     method: 'POST',
+    headers: { 'X-API-Key': API_KEY },
   });
 
   const data = await response.json().catch(() => ({}));

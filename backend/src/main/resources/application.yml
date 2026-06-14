@@ -4,6 +4,9 @@ server:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 
+security:
+  api-key: ${HACKSIM_API_KEY:dev-local-key}
+
 spring:
   datasource:
     url: ${DB_URL:jdbc:h2:file:./data/hacksim;AUTO_SERVER=TRUE}

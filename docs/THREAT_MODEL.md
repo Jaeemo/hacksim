@@ -64,9 +64,9 @@ Legend for mitigation status: ✅ implemented · 🟡 partial · ⬜ planned.
 
 | STRIDE | Threat | Mitigation | Status |
 |--------|--------|------------|--------|
-| Spoofing | Anyone on the network calls the trigger endpoint — no authentication today | Add authn (token/session) on `/api/**`; bind backend to localhost in single-host setups | ⬜ |
+| Spoofing | Anyone on the network calls the trigger endpoint | `X-API-Key` required on the detonation trigger (`ApiKeyAuthFilter`); rejected attempts are logged | ✅ |
 | Tampering | Malicious `simulationType` path value | Type is mapped against a fixed allowlist of configured shortcuts; unknown → 404 | ✅ |
-| Repudiation | No record of who triggered what detonation | Add audit log (who/when/which scenario) | ⬜ |
+| Repudiation | No record of who triggered what detonation | Every request persisted as a `DetonationRun` (scenario, client IP, status, timestamps) | ✅ |
 | Information disclosure | Verbose error messages return raw `vmrun` output to the client | Return generic errors to client, keep detail in server logs; add `@ControllerAdvice` | 🟡 |
 | Denial of service | Unauthenticated endpoint can be hammered; each call blocks a request thread | Rate limiting + move detonation to an async job queue (Phase 5) | ⬜ |
 | Elevation of privilege | CORS `allowCredentials(true)` with configurable origins | Origins are allowlisted via config (no `*`); review before exposing publicly | 🟡 |
@@ -100,8 +100,8 @@ Legend for mitigation status: ✅ implemented · 🟡 partial · ⬜ planned.
 
 ## 5. Key residual risks (today)
 
-1. **Unauthenticated detonation trigger** — anyone able to reach the backend port can execute malware
-   in the guest. Highest-priority gap. *(Phase 4)*
+1. **Detonation trigger now requires an API key** (`ApiKeyAuthFilter`, rejects logged) — the former
+   top gap is closed. Remaining hardening: per-key rate limiting and a real IdP in production. *(Phase 4 done)*
 2. **Network isolation depends on operator setup** — the isolated-vmnet + INetSim design and a
    pre-snapshot verification script ship in `network/`, but isolation is only real once the lab is
    wired that way; `verify_isolation.ps1` is the gate that proves it. *(Phase 2 — design done)*
@@ -114,6 +114,6 @@ Legend for mitigation status: ✅ implemented · 🟡 partial · ⬜ planned.
 
 - [x] Data-flow diagram with explicit trust-boundary lines (DFD level 1) — `docs/dfd.svg`
 - [x] Network-isolation design + INetSim config + verification script (Boundary 4) — `network/`, `vm_scripts/verify_isolation.ps1`
-- [ ] Authn + audit logging design (Boundary 1)
+- [x] Authn (API key) + audit logging (Boundary 1) — `ApiKeyAuthFilter` + `DetonationRun`
 - [ ] Documented procedure for capturing a verified-clean snapshot (Boundary 3)
 - [ ] Tie detected behaviours (Phase 1 telemetry) back to the threats above

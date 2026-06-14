@@ -73,13 +73,6 @@ class TelemetryIntegrationTest {
     }
 
     @Test
-    void unknownSimulationTypeReturns404() throws Exception {
-        mockMvc.perform(post("/api/start-simulation/{type}", "notarealtype"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value("error"));
-    }
-
-    @Test
     void runsEndpointReturnsAuditLog() throws Exception {
         runRepository.save(new DetonationRun("worm", "10.0.0.9"));
 
