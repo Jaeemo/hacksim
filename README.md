@@ -1,5 +1,7 @@
 # Hacksim — malware-detonation & analysis sandbox
 
+> 악성코드 디토네이션·분석 샌드박스 (보안 포트폴리오). 자매 프로젝트: `ksd-settlement` (증권 결제·예탁 시스템).
+
 Hacksim teaches malware behaviour through a three-stage experience and turns the hands-on stage into a
 small malware sandbox: learn about malware → experience a safe in-browser simulation → **detonate a
 real sample in an isolated VM**, capture its behaviour, and read an ATT&CK-mapped report → check your
